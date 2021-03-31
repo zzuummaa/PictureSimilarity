@@ -1,0 +1,6 @@
+50
+../images/test_pic_1.png
+../images/test_pic_1m.png
+../images/test_pic_2.png
+../images/test_pic_2m.png
+../images/test_pic_3.png
