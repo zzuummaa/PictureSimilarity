@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <vector>
 #include <numeric>
+#include <chrono>
 
 using namespace cv;
 
@@ -17,9 +18,15 @@ struct similarity_record {
 	float avg_dist;
 	float median_dist;
 	size_t matches_count;
+	float metrics;
 };
 
-std::vector<DMatch> calculate_matches(const Ptr<ORB>& orb, const Ptr<BFMatcher>& bf, const Mat& a, const Mat& b, bool is_show = false) {
+struct match_result {
+	std::vector<DMatch> good;
+	std::vector<DMatch> all;
+};
+
+match_result calculate_matches(const Ptr<ORB>& orb, const Ptr<BFMatcher>& bf, const Mat& a, const Mat& b, bool is_show = false) {
 	std::vector<KeyPoint> keypointsA;
 	Mat descriptorsA;
 	orb->detectAndCompute(a, noArray(), keypointsA, descriptorsA);
@@ -28,14 +35,27 @@ std::vector<DMatch> calculate_matches(const Ptr<ORB>& orb, const Ptr<BFMatcher>&
 	Mat descriptorsB;
 	orb->detectAndCompute(b, noArray(), keypointsB, descriptorsB);
 
-	std::vector<DMatch> matches;
-	bf->match(descriptorsA, descriptorsB, matches);
+	std::vector<std::vector<DMatch> > matches;
+	bf->knnMatch(descriptorsA, descriptorsB, matches, 2);
 
-	std::sort(matches.begin(), matches.end(), [](auto& l, auto& h){ return l.distance < h.distance; });
+	float lowe_ratio = 0.89f;
+
+	match_result result;
+	for (const auto& match: matches) {
+		if (match.size() != 2) {
+			std::cout << "Invalid knnMatch output: match.size() != 2" << std::endl;
+			return match_result();
+		}
+		if (match[0].distance < match[1].distance * lowe_ratio) result.good.push_back(match[0]);
+		result.all.push_back(match[0]);
+	}
+
+	std::sort(result.good.begin(), result.good.end(), [](auto& l, auto& h){ return l.distance < h.distance; });
+	std::sort(result.all.begin(), result.all.end(), [](auto& l, auto& h){ return l.distance < h.distance; });
 
 	if (is_show) {
 		Mat matches_image;
-		drawMatches(a, keypointsA, b, keypointsB, matches, matches_image);
+		drawMatches(a, keypointsA, b, keypointsB, result.good, matches_image);
 
 		Mat matches_image_scaled;
 		auto scaleX = matches_image.cols > 900 ? 900.f / static_cast<float>(matches_image.cols) : 1.f;
@@ -48,10 +68,11 @@ std::vector<DMatch> calculate_matches(const Ptr<ORB>& orb, const Ptr<BFMatcher>&
 		imshow(std::to_string(window_count++), matches_image_scaled);
 	}
 
-	return matches;
+	return result;
 }
 
 float avg_distance(const std::vector<DMatch>& matches) {
+	if (matches.empty()) return 0.f;
 	return std::accumulate(matches.begin(), matches.end(), 0.f, [](auto& sum, auto& match){
 		return sum + match.distance;
 	}) / matches.size();
@@ -61,19 +82,28 @@ float median_distance(const std::vector<DMatch>& matches) {
 	return matches.empty() ? 0.f : matches[matches.size() / 2].distance;
 }
 
+float similarity_metrics(const match_result& result) {
+	return static_cast<float>(result.good.size()) / result.all.size();
+}
+
 std::vector<similarity_record> estimate_similarity(const std::vector<Mat>& images) {
 	auto orb = ORB::create();
-	auto bf = BFMatcher::create(NORM_HAMMING, true);
+	auto bf = BFMatcher::create();
 
 	std::vector<similarity_record> similarities;
 	for (size_t i = 0; i < images.size(); i++) {
-		for (size_t j = 0; j < images.size(); j++) {
-			if (i == j) continue;
-
-			auto matches = calculate_matches(orb, bf, images[i], images[j], true);
+		for (size_t j = i + 1; j < images.size(); j++) {
+			auto matches = calculate_matches(orb, bf, images[i], images[j], false);
 
 			similarities.push_back(
-				similarity_record { i, j, avg_distance(matches), median_distance(matches), matches.size() }
+				similarity_record {
+						i,
+						j,
+						avg_distance(matches.all),
+						median_distance(matches.all),
+						matches.all.size(),
+						similarity_metrics(matches)
+				}
 			);
 		}
 	}
@@ -105,16 +135,18 @@ int main() {
 	}
 
 	auto similarities = estimate_similarity(images);
+
 	for (auto& s: similarities) {
+		if (s.metrics * 100 < threshold) continue;
+
 		std::cout << image_paths[s.image_a_idx] << ",\t"
 				  << image_paths[s.image_b_idx] << ",\t"
-				  << std::fixed << std::setprecision(2)
-				  << s.avg_dist << ",\t"
-				  << s.median_dist << ",\t"
-				  << s.matches_count << std::endl;
+//				  << std::fixed << std::setprecision(2)
+//				  << s.avg_dist << ",\t"
+//				  << s.median_dist << ",\t"
+//				  << s.matches_count << ",\t"
+				  << static_cast<int>(s.metrics * 100) << std::endl;
 	}
-
-	waitKey(0);
 
 	return 0;
 }
