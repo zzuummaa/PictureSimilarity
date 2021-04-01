@@ -11,6 +11,8 @@ MSVC 142
 
 ## Сборка
 
+Открыть `Developer Command Prompt for VS 2019`, перейти в папку с проектом и выполнить следующие команды:
+
 ```cmd
 mkdir build
 cd build
@@ -19,6 +21,8 @@ cmake --build .
 ```
 
 ## Запуск
+
+Открыть `Developer Command Prompt for VS 2019`, перейти в папку `build` проекта и выполнить следующие команды:
 
 ```cmd
 Path=%Path%;%OpenCV_install_dir%/%OpenCV_ARCH%/%OpenCV_RUNTIME%/bin;
