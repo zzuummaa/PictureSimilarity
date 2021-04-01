@@ -26,7 +26,7 @@ cmake --build .
 
 ```cmd
 Path=%Path%;%OpenCV_install_dir%/%OpenCV_ARCH%/%OpenCV_RUNTIME%/bin;
-./PictureSimilarity.exe
+./PictureSimilarity.exe < ../input.txt
 ```
 
 ## Список использованных источников
