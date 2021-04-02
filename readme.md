@@ -31,7 +31,7 @@ Path=%Path%;%OpenCV_install_dir%/%OpenCV_ARCH%/%OpenCV_RUNTIME%/bin;
 
 ## Список использованных источников
 
-1. [OpenCV-Python Tutorials » Feature Detection and Description » Feature Matching](https://docs.opencv.org/master/db/deb/tutorial_display_image.html)
+1. [OpenCV-Python Tutorials » Feature Detection and Description » Feature Matching](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_matcher/py_matcher.html)
 
 2. [OpenCV-Python Tutorials » Feature Detection and Description » ORB (Oriented FAST and Rotated BRIEF)](https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_feature2d/py_orb/py_orb.html)
 
